@@ -1,0 +1,76 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SELLER
+}
+
+enum DimensionType {
+  WEIGHT
+  VOLUME
+  COUNT
+}
+
+enum OrderStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(SELLER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  orders    Order[]
+}
+
+model Product {
+  id              String        @id @default(uuid())
+  name            String        @unique
+  description     String?
+  category        String
+  dimensionType   DimensionType
+  baseUnit        String        // 'g' for WEIGHT, 'mL' for VOLUME, 'item' for COUNT
+  ratePerBaseUnit Decimal       @db.Decimal(18, 6)
+  stockQuantity   Decimal       @db.Decimal(18, 6)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  orderItems      OrderItem[]
+}
+
+model Order {
+  id         String      @id @default(uuid())
+  userId     String
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status     OrderStatus @default(PENDING)
+  totalPrice Decimal     @db.Decimal(18, 6)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  items      OrderItem[]
+}
+
+model OrderItem {
+  id                 String   @id @default(uuid())
+  orderId            String
+  order              Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId          String
+  product            Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  enteredQuantity    Decimal  @db.Decimal(18, 6)
+  enteredUnit        String   // 'g', 'kg', 'mL', 'L', 'item'
+  quantityInBaseUnit Decimal  @db.Decimal(18, 6)
+  calculatedPrice    Decimal  @db.Decimal(18, 6)
+}
