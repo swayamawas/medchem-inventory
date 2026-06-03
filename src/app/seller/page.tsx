@@ -9,9 +9,9 @@ export const revalidate = 0; // Disable caching
 export default async function SellerPage() {
   const session = await getServerSession(authOptions);
 
-  if (!session || session.user.role !== "SELLER") {
-    redirect("/auth/signin");
-  }
+if (!session) {
+  redirect("/auth/signin");
+}
 
   // Fetch products
   const productsRaw = await prisma.product.findMany({
