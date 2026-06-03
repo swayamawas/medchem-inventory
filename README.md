@@ -1,271 +1,522 @@
-# AasaMedChem — Inventory & Order Management System
+# AasaMedChem – Inventory & Order Management System
 
-A production-ready inventory and quotation management system for chemical sales. Built with Next.js, Prisma, and PostgreSQL (Neon), this system supports multi-unit chemical ordering with precise base-unit conversions and role-based access control.
+## Project Overview
 
----
+A production-ready Inventory and Order Management System built for chemical sales and inventory tracking.
 
-## Live Demo
+The application allows administrators to manage products, inventory, pricing, and incoming orders while sellers can browse products, generate quotations, and place orders using flexible units such as grams, kilograms, milliliters, liters, and item counts.
 
-> Deploy to Vercel using the guide below to get a live URL.
-
-**Test Credentials:**
-
-| Role   | Email                        | Password       |
-|--------|------------------------------|----------------|
-| Admin  | admin@aasamedchem.com        | AdminPass123   |
-| Seller | seller@aasamedchem.com       | SellerPass123  |
+The system uses a normalized storage strategy where all quantities and prices are converted into base units before being stored in the database. This ensures accurate inventory management, consistent pricing calculations, and reliable reporting.
 
 ---
 
-## Features
+## Repository
 
-- **Role-Based Auth** — ADMIN and SELLER roles via NextAuth.js credentials
-- **Product CRUD** — Admin can create, edit, delete products with live conversion preview in the form
-- **Unit Conversion Engine** — All quantities stored in base units (g, mL, item); rates stored per base unit
-- **Live Price Calculation** — Seller sees the exact formula: `quantity_in_base × rate_per_base = price`
-- **Quotation / Order Flow** — Seller adds products to cart, picks any supported unit, confirms order
-- **Admin Order Audit** — Admin sees: entered unit, base unit stored, conversion factor used, and final price
-- **Stock Deduction** — Approving an order deducts from inventory in a database transaction
-- **INR Pricing** — All monetary values displayed in ₹
+GitHub Repository:
+
+https://github.com/swayamawas/medchem-inventory
 
 ---
 
-## Tech Stack
+## Test Credentials
 
-| Layer       | Technology                          |
-|-------------|-------------------------------------|
-| Frontend    | Next.js 16 (App Router), TypeScript |
-| Styling     | Tailwind CSS v4                     |
-| Auth        | NextAuth.js v4 (Credentials)        |
-| ORM         | Prisma v5.14                        |
-| Database    | Neon PostgreSQL (hosted)            |
-| Deployment  | Vercel                              |
+### Admin
+
+Email: [admin@aasamedchem.com](mailto:admin@aasamedchem.com)
+
+Password: AdminPass123
+
+### Seller
+
+Email: [seller@aasamedchem.com](mailto:seller@aasamedchem.com)
+
+Password: SellerPass123
 
 ---
 
-## System Design
+# Features
 
+## Authentication & Authorization
+
+* Role-based authentication using NextAuth.js
+* ADMIN role
+* SELLER role
+* Protected routes using middleware
+
+## Product Management
+
+* Create products
+* Edit products
+* Delete products
+* Manage inventory levels
+* Configure pricing
+* Live conversion preview before saving
+
+## Unit Conversion Engine
+
+Supported Units:
+
+### Weight
+
+* g
+* kg
+
+### Volume
+
+* mL
+* L
+
+### Count
+
+* item
+
+All values are normalized and stored in base units.
+
+## Seller Features
+
+* Browse products
+* Search products
+* Filter by category
+* Add products to quotation/order
+* Select quantity and unit
+* Live pricing calculations
+* View order history
+
+## Admin Features
+
+* Product CRUD
+* Inventory monitoring
+* Review incoming orders
+* Approve orders
+* Reject orders
+* View conversion audit trail
+* Automatic inventory deduction
+
+## Pricing
+
+* INR (₹) support
+* High precision pricing
+* Automatic unit-aware calculations
+
+---
+
+# Technology Stack
+
+## Frontend
+
+* Next.js 16 (App Router)
+* TypeScript
+* Tailwind CSS
+
+## Backend
+
+* Next.js Server Actions
+
+## Authentication
+
+* NextAuth.js
+
+## ORM
+
+* Prisma ORM
+
+## Database
+
+* Neon PostgreSQL
+
+## Deployment
+
+* Vercel
+
+---
+
+# High Level Architecture
+
+```text
+Seller/Admin
+      │
+      ▼
+Next.js Frontend
+      │
+      ▼
+Server Actions
+      │
+      ▼
+Prisma ORM
+      │
+      ▼
+Neon PostgreSQL
 ```
-Browser (Client)
-    │
-    ▼
-Next.js App Router (Server Components + Server Actions)
-    │
-    ├── /auth/signin      → Public sign-in page
-    ├── /admin            → Admin-only (products CRUD + order review)
-    └── /seller           → Seller-only (browse + order/quotation placement)
-    │
-    ▼
-Prisma ORM (v5.14, prisma-client-js)
-    │
-    ▼
-Neon PostgreSQL — schema: "medchem"
-    Tables: User, Product, Order, OrderItem
-```
 
-Middleware (`src/middleware.ts`) enforces role-based route protection at the edge.
+Middleware enforces role-based access control for Admin and Seller dashboards.
 
 ---
 
-## Database Schema
+# Database Schema
 
-### User
-| Field     | Type        | Notes                        |
-|-----------|-------------|------------------------------|
-| id        | UUID (PK)   | Auto-generated               |
-| name      | String      |                              |
-| email     | String      | Unique                       |
-| password  | String      | bcryptjs hashed              |
-| role      | Enum        | `ADMIN` or `SELLER`          |
-| createdAt | DateTime    |                              |
-| updatedAt | DateTime    |                              |
+## User
 
-### Product
-| Field           | Type               | Notes                                              |
-|-----------------|--------------------|----------------------------------------------------|
-| id              | UUID (PK)          |                                                    |
-| name            | String             | Unique                                             |
-| description     | String?            | Optional                                           |
-| category        | String             | e.g. Solvents, Acids, Salts                        |
-| dimensionType   | Enum               | `WEIGHT`, `VOLUME`, or `COUNT`                     |
-| baseUnit        | String             | Always `g`, `mL`, or `item`                        |
-| ratePerBaseUnit | NUMERIC(18,6)      | ₹ per 1 base unit                                  |
-| stockQuantity   | NUMERIC(18,6)      | Always in base unit                                |
+Stores authentication credentials and user role.
 
-### Order
-| Field      | Type          | Notes                             |
-|------------|---------------|-----------------------------------|
-| id         | UUID (PK)     |                                   |
-| userId     | UUID (FK)     | → User                            |
-| status     | Enum          | `PENDING`, `APPROVED`, `REJECTED` |
-| totalPrice | NUMERIC(18,6) | Sum of all order item prices       |
-| createdAt  | DateTime      |                                   |
-
-### OrderItem ← Most Important Table
-| Field             | Type          | Notes                                          |
-|-------------------|---------------|------------------------------------------------|
-| id                | UUID (PK)     |                                                |
-| orderId           | UUID (FK)     | → Order                                        |
-| productId         | UUID (FK)     | → Product                                      |
-| enteredQuantity   | NUMERIC(18,6) | What the seller typed (e.g. `2`)               |
-| enteredUnit       | String        | What the seller chose (e.g. `kg`)              |
-| quantityInBaseUnit| NUMERIC(18,6) | Converted value (e.g. `2000` for 2 kg)         |
-| calculatedPrice   | NUMERIC(18,6) | `quantityInBaseUnit × ratePerBaseUnit`         |
+| Field    | Type           |
+| -------- | -------------- |
+| id       | UUID           |
+| name     | String         |
+| email    | String         |
+| password | String         |
+| role     | ADMIN / SELLER |
 
 ---
 
-## Unit Storage & Conversion Strategy
+## Product
 
-### Why Base Units?
-Storing all quantities in a single base unit per dimension type eliminates conversion ambiguity and makes pricing calculations trivially correct.
+Stores inventory and pricing information.
 
-### Dimension → Base Unit Mapping
-| Dimension | Base Unit | Supported Input Units |
-|-----------|-----------|-----------------------|
-| WEIGHT    | `g`       | `g`, `kg`             |
-| VOLUME    | `mL`      | `mL`, `L`             |
-| COUNT     | `item`    | `item`                |
+| Field           | Type                    |
+| --------------- | ----------------------- |
+| id              | UUID                    |
+| name            | String                  |
+| description     | String                  |
+| category        | String                  |
+| dimensionType   | WEIGHT / VOLUME / COUNT |
+| baseUnit        | String                  |
+| ratePerBaseUnit | NUMERIC(18,6)           |
+| stockQuantity   | NUMERIC(18,6)           |
 
-### Conversion Factors (`src/utils/conversions.ts`)
+---
+
+## Order
+
+Stores order header information.
+
+| Field      | Type                          |
+| ---------- | ----------------------------- |
+| id         | UUID                          |
+| userId     | UUID                          |
+| status     | PENDING / APPROVED / REJECTED |
+| totalPrice | NUMERIC(18,6)                 |
+
+---
+
+## OrderItem
+
+Stores individual products within an order.
+
+| Field              | Type          |
+| ------------------ | ------------- |
+| id                 | UUID          |
+| orderId            | UUID          |
+| productId          | UUID          |
+| enteredQuantity    | NUMERIC(18,6) |
+| enteredUnit        | String        |
+| quantityInBaseUnit | NUMERIC(18,6) |
+| calculatedPrice    | NUMERIC(18,6) |
+
+---
+
+# Unit Storage Strategy
+
+## Why Base Units?
+
+All inventory values are stored in a single base unit for each dimension.
+
+This eliminates conversion ambiguity and simplifies inventory calculations.
+
+### Base Unit Mapping
+
+| Dimension | Base Unit |
+| --------- | --------- |
+| WEIGHT    | g         |
+| VOLUME    | mL        |
+| COUNT     | item      |
+
+### Supported Units
+
+| Dimension | Supported Units |
+| --------- | --------------- |
+| WEIGHT    | g, kg           |
+| VOLUME    | mL, L           |
+| COUNT     | item            |
+
+---
+
+# Conversion Factors
+
 ```ts
 const UNIT_FACTORS = {
-  g:    1,       // base
-  kg:   1000,    // 1 kg = 1000 g
-  mL:   1,       // base
-  L:    1000,    // 1 L = 1000 mL
-  item: 1,       // base
-}
+  g: 1,
+  kg: 1000,
+  mL: 1,
+  L: 1000,
+  item: 1,
+};
 ```
 
-### Pricing Strategy
-Prices are **always stored as rate per 1 base unit** in the database:
+Examples:
 
-| Admin Inputs     | Stored in DB as            |
-|------------------|----------------------------|
-| ₹1000 per L      | ₹1.000000 per mL           |
-| ₹1200 per kg     | ₹1.200000 per g            |
-| ₹150 per item    | ₹150.000000 per item       |
+* 1 kg = 1000 g
+* 2 kg = 2000 g
+* 1 L = 1000 mL
+* 2 L = 2000 mL
 
-This means price calculation is always: `quantityInBaseUnit × ratePerBaseUnit`.
+---
 
-**Example:**
+# Pricing Strategy
+
+Prices are stored as:
+
+```text
+ratePerBaseUnit
 ```
+
+Examples:
+
+| Admin Input | Stored In Database |
+| ----------- | ------------------ |
+| ₹1000 / L   | ₹1.000000 / mL     |
+| ₹1200 / kg  | ₹1.200000 / g      |
+| ₹150 / item | ₹150.000000 / item |
+
+Price Calculation Formula:
+
+```text
+quantityInBaseUnit × ratePerBaseUnit
+```
+
+Example:
+
+```text
 Product: Ethanol
-Admin configures: ₹1000/L  →  stored as ₹1.000000/mL
 
-Seller orders: 250 mL
-  quantityInBaseUnit = 250 mL × 1 = 250 mL
-  calculatedPrice    = 250 × ₹1.000000 = ₹250.00 ✓
+Configured:
+₹1000 / L
 
-Seller orders: 2 L
-  quantityInBaseUnit = 2 × 1000 = 2000 mL
-  calculatedPrice    = 2000 × ₹1.000000 = ₹2000.00 ✓
+Stored:
+₹1 / mL
+
+Order:
+2 L
+
+Conversion:
+2 × 1000 = 2000 mL
+
+Price:
+2000 × ₹1 = ₹2000
 ```
-
-### Conversion Flow
-```
-User Input (e.g. 2 kg Sodium Chloride)
-    │
-    ▼  convertToBaseUnit(2, "kg") → 2 × 1000 = 2000 g
-    │
-    ▼  calculatePrice(2000, 1.2) → ₹2400
-    │
-    ▼  Store in OrderItem:
-       enteredQuantity = 2
-       enteredUnit = "kg"
-       quantityInBaseUnit = 2000
-       calculatedPrice = 2400.00
-```
-
-### Where Conversions Happen
-- **Saving products** (`actions.ts → createProductAction`): admin's display-unit rate → base unit rate
-- **Placing orders** (`actions.ts → placeOrderAction`): seller's entered quantity → base unit quantity → price
-- **Displaying data** (UI components): base unit values → display unit for human-readable presentation
 
 ---
 
-## PostgreSQL Data Types Rationale
+# Conversion Flow
 
-| Field Type     | PostgreSQL Type  | Reason                                                              |
-|----------------|------------------|---------------------------------------------------------------------|
-| Price/Rate     | `NUMERIC(18,6)`  | 18 digits total, 6 decimal places. No floating-point rounding errors. Supports prices like ₹0.000001/mL |
-| Quantity/Stock | `NUMERIC(18,6)`  | Same. Supports both large stocks (millions of mL) and tiny decimals |
-
-`NUMERIC` (also called `DECIMAL`) is an exact numeric type in PostgreSQL, unlike `FLOAT` or `DOUBLE` which have binary floating-point representation errors that compound in financial calculations.
+```text
+User Input
+      │
+      ▼
+Convert To Base Unit
+      │
+      ▼
+Calculate Price
+      │
+      ▼
+Store In Database
+      │
+      ▼
+Display To Admin
+```
 
 ---
 
-## Local Setup
+# Where Conversions Occur
 
-### Prerequisites
-- Node.js 18+
-- npm
+### Product Creation
 
-### Steps
+Admin-entered values are converted into base-unit values before storage.
+
+### Order Placement
+
+Seller-entered quantities are converted into base units before pricing calculations.
+
+### UI Display
+
+Stored base-unit values are converted into user-friendly units for display.
+
+---
+
+# PostgreSQL Data Type Decisions
+
+### Why NUMERIC(18,6)?
+
+Inventory and pricing systems require exact precision.
+
+Using:
+
+```sql
+NUMERIC(18,6)
+```
+
+prevents floating-point rounding errors.
+
+Benefits:
+
+* Supports very small values
+* Supports very large values
+* Exact financial calculations
+* No FLOAT precision issues
+
+---
+
+# Key Design Decisions
+
+## Why PostgreSQL?
+
+PostgreSQL provides:
+
+* Strong relational modeling
+* ACID transactions
+* Reliable data consistency
+* Excellent support for financial calculations
+
+## Why Base Unit Storage?
+
+Normalization simplifies:
+
+* Inventory tracking
+* Reporting
+* Pricing calculations
+* Unit conversion
+
+## Why OrderItem Table?
+
+One order can contain multiple products.
+
+The OrderItem table stores product-specific quantities, units, conversions, and pricing.
+
+## Why ratePerBaseUnit?
+
+A single pricing formula can be used regardless of which unit the seller selects.
+
+---
+
+# Local Setup
+
+## Install Dependencies
+
 ```bash
-# 1. Clone and enter directory
-cd C:\Users\swaya\.gemini\antigravity\scratch\medchem-inventory
+npm install
+```
 
-# 2. Install dependencies
-npm install --legacy-peer-deps
+## Configure Environment Variables
 
-# 3. Create .env file
-# DATABASE_URL="postgresql://..."   ← your Neon connection string with &schema=medchem
-# NEXTAUTH_SECRET="your-secret-key"
-# NEXTAUTH_URL="http://localhost:3000"
+Create a .env file:
 
-# 4. Push schema to database
+```env
+DATABASE_URL=your_neon_connection_string
+NEXTAUTH_SECRET=your_secret
+NEXTAUTH_URL=http://localhost:3000
+```
+
+## Push Schema
+
+```bash
 npx prisma db push
+```
 
-# 5. Generate Prisma client
+## Generate Prisma Client
+
+```bash
 npx prisma generate
+```
 
-# 6. Seed sample data
+## Seed Database
+
+```bash
 npx prisma db seed
+```
 
-# 7. Run dev server
+## Run Development Server
+
+```bash
 npm run dev
 ```
 
-Open http://localhost:3000 — you'll be redirected to the sign-in page.
+Open:
+
+http://localhost:3000
 
 ---
 
-## Deployment to Vercel
+# Deployment (Vercel)
 
-1. Push this project to a GitHub repository
-2. Import it in [vercel.com](https://vercel.com)
-3. Set these environment variables in Vercel Dashboard:
-   - `DATABASE_URL` — Neon PostgreSQL connection string (with `?sslmode=require&schema=medchem`)
-   - `NEXTAUTH_SECRET` — any strong random string
-   - `NEXTAUTH_URL` — your Vercel deployment URL (e.g. `https://medchem.vercel.app`)
-4. Deploy. Vercel will run `npm run build` automatically.
+1. Push code to GitHub
+2. Import repository into Vercel
+3. Configure environment variables
 
----
+Required Variables:
 
-## Using the Application
+```env
+DATABASE_URL
+NEXTAUTH_SECRET
+NEXTAUTH_URL
+```
 
-### Admin Panel (`/admin`)
-1. Log in as Admin
-2. **Products tab**: Create/edit/delete products. The form shows a live preview of the exact values that will be stored in the DB (base unit rate and base unit stock).
-3. **Incoming Orders tab**: View all submitted orders. Click any row to expand and see the full conversion audit (entered unit → base unit → formula → price). Approve or Reject pending orders.
-
-### Seller Panel (`/seller`)
-1. Log in as Seller
-2. **Browse Chemicals tab**: Search by name, filter by category. Each card shows the catalog price in a human-friendly unit (e.g. ₹1000/L) and the base rate for transparency.
-3. Click "Add to Order" → adjust quantity and unit in the order panel on the right. The system shows the live formula: `X unit = Y base_unit → ₹Z`.
-4. Click "Place Quotation / Order" to submit. The order goes to `PENDING` and awaits Admin approval.
-5. **My Orders tab**: Track status of all your submitted orders.
+4. Deploy
 
 ---
 
-## Git Commit Strategy
-Following incremental commits (not a single mega-commit):
-1. `chore: Initial Next.js project setup`
-2. `feat: Database schema - User, Product, Order, OrderItem with NUMERIC(18,6)`
-3. `feat: NextAuth credentials authentication with ADMIN/SELLER roles`
-4. `feat: Unit conversion utilities - convertToBaseUnit, calculatePrice`
-5. `feat: Admin product CRUD with live base-unit conversion preview`
-6. `feat: Seller catalog, cart, and quotation/order placement flow`
-7. `feat: Admin order audit panel with conversion verification`
-8. `chore: UI polish, global CSS, and documentation`
+# Using The Application
+
+## Admin Workflow
+
+1. Login as Admin
+2. Create/Edit Products
+3. Configure Pricing
+4. Monitor Inventory
+5. Review Orders
+6. Approve or Reject Orders
+
+---
+
+## Seller Workflow
+
+1. Login as Seller
+2. Search Products
+3. Select Quantity & Unit
+4. View Live Pricing
+5. Place Order
+6. Track Status
+
+---
+
+# Screenshots
+
+## Admin Dashboard
+
+* Product Management
+* Inventory Monitoring
+
+## Seller Dashboard
+
+* Product Catalog
+* Search & Filtering
+
+## Order Workflow
+
+* Order Placement
+* Admin Approval
+* Inventory Deduction
+
+---
+
+# Future Improvements
+
+* Inventory history tracking
+* Email notifications
+* Advanced reporting
+* CSV export
+* Pagination for large datasets
+
+---
+
+# Conclusion
+
+This project demonstrates a complete inventory and quotation workflow using normalized unit storage, precise financial calculations, role-based access control, and transactional inventory management. The system ensures accurate pricing, reliable inventory tracking, and scalable architecture suitable for real-world chemical inventory operations.
