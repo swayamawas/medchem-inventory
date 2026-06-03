@@ -8,7 +8,7 @@ export const revalidate = 0; // Disable caching
 
 export default async function AdminPage() {
   const session = await getServerSession(authOptions);
-
+console.log("ADMIN SESSION:", JSON.stringify(session, null, 2));
  if (!session) {
   redirect("/auth/signin");
 }
